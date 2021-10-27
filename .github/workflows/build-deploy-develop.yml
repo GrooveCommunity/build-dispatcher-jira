@@ -3,15 +3,15 @@ name: Build and Deploy Image
 on:
   push:
     branches:
-    - 'main'
+    - 'develop'
 
 env:
-  PROJECT_ID: ${{ secrets.GKE_NOC_PROJECT }}
+  PROJECT_ID: ${{ secrets.DEVELOP_GKE_NOC_PROJECT }}
   GKE_REGION: us-central1
   GKE_CLUSTER: noc
   IMAGE: dispatcher-jira-paygo
   APP_PORT: 9578
-  VERSION: 2.1.3
+  VERSION: 2.1.2
   MAIN_REPO_NAME: dispatcher-jira
   DEP_STRUCTS_REPO_NAME: glib-noc-event-structs
   DEP_STORAGE_REPO_NAME: glib-cloud-storage
@@ -33,8 +33,8 @@ jobs:
       uses: google-github-actions/setup-gcloud@master
       with:
         version: '290.0.1'
-        service_account_key: ${{ secrets.GKE_NOC_SA_KEY }}
-        project_id: ${{ secrets.GKE_NOC_PROJECT }}
+        service_account_key: ${{ secrets.DEVELOP_GKE_NOC_SA_KEY }}
+        project_id: ${{ secrets.DEVELOP_GKE_NOC_PROJECT }}
 
     - name: Configure Docker 
       run: |-
@@ -65,13 +65,12 @@ jobs:
       uses: google-github-actions/setup-gcloud@master
       with:
         version: '290.0.1'
-        service_account_key: ${{ secrets.GKE_NOC_SA_KEY }}
-        project_id: ${{ secrets.GKE_NOC_PROJECT }}
+        service_account_key: ${{ secrets.DEVELOP_GKE_NOC_SA_KEY }}
+        project_id: ${{ secrets.DEVELOP_GKE_NOC_PROJECT }}
         
     - name: Get The GKE credentials
       run: |-
         gcloud container clusters get-credentials "$GKE_CLUSTER" --region us-central1
-
     - name: Create IP Load Balancer
       run: |-
         gcloud compute addresses create lb-dispatcher-jira --global 
@@ -85,20 +84,16 @@ jobs:
     - name: Create deployment 
       run: |-
         kubectl apply -f deployment.yml -n paygo 
-
     - name: Replace APP PORT
       run: |-
         sed -i 's/APP_PORT/${{ env.APP_PORT }}/g' service.yml
         sed -i 's/APP_PORT/${{ env.APP_PORT }}/g' ingress.yml
-
     - name: Create cert
       run: |-
         kubectl apply -f certificate.yml -n paygo
-
     - name: Service deploy
       run: |-
         kubectl apply -f service.yml -n paygo
-
     - name: Ingress deploy
       run: |-
         kubectl apply -f ingress.yml -n paygo
